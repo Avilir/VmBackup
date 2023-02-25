@@ -231,7 +231,7 @@ def main(session):
                 # non-fatal - finish processing for this vm
 
         # === pre_cleanup code goes in here ===
-        if pre_clean:
+        if arg.is_pre_clean():
             pre_cleanup(vm_backup_dir, vm_max_backups)
 
         # take a vdi-snapshot of this vm
@@ -441,7 +441,7 @@ def main(session):
         # === pre_cleanup code goes in here ===
         # print('vm_backup_dir: %s' % vm_backup_dir)
         # print('vm_max_backups: %s' % vm_max_backups)
-        if pre_clean:
+        if arg.is_pre_clean():
             pre_cleanup(vm_backup_dir, vm_max_backups)
 
         # take a vm-snapshot of this vm
@@ -479,7 +479,7 @@ def main(session):
 
         # vm-export vm-snapshot
         cmd = "%s/xe vm-export uuid=%s" % (xe_path, snap_vm_uuid)
-        if compress:
+        if arg.is_compress():
             full_path_backup_file = os.path.join(full_backup_dir, vm_name + ".xva.gz")
             cmd = '%s filename="%s" compress=true' % (cmd, full_path_backup_file)
         else:
@@ -1128,7 +1128,7 @@ def config_load(path):
 
             # check for valid keys
             if not key in expected_keys:
-                if ignore_extra_keys:
+                if arg.is_ignore_extra_keys():
                     log("ignoring config key: %s" % key)
                 else:
                     print("***ERROR unexpected config key: %s" % key)
@@ -1482,7 +1482,7 @@ def config_print():
     log("VmBackup.py running with these settings:")
     log("  backup_dir        = %s" % config["backup_dir"])
     log("  status_log        = %s" % config["status_log"])
-    log("  compress          = %s" % compress)
+    log("  compress          = %s" % arg.is_compress())
     log("  max_backups       = %s" % config["max_backups"])
     log("  vdi_export_format = %s" % config["vdi_export_format"])
     log("  pool_db_backup    = %s" % config["pool_db_backup"])
@@ -1583,12 +1583,6 @@ if __name__ == "__main__":
     password = arg.get_password()
     cfg_file = arg.args.config_file or ""
 
-    # load optional params
-    preview = arg.args.preview
-    compress = arg.args.compress
-    ignore_extra_keys = arg.args.ignore_extra_keys
-    pre_clean = arg.args.pre_clean
-
     # init vm-export/vdi-export/exclude in config list
     config["vm-export"] = []
     config["vdi-export"] = []
@@ -1648,7 +1642,7 @@ if __name__ == "__main__":
             print("ERROR - XenAPI authentication error")
             sys.exit(1)
 
-    if preview:
+    if arg.is_preview():
         # check for duplicate names
         log("Checking all VMs for duplicate names ...")
         for vm in all_vms:
@@ -1667,7 +1661,7 @@ if __name__ == "__main__":
     # show_vms_not_in_backup()
 
     # todo - these warning/errors are a little confusing, clean these up later
-    if preview:
+    if arg.is_preview():
         warning = ""
         if warning_match:
             warning = " - WARNINGS found (see above)"

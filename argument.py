@@ -125,6 +125,18 @@ class Arguments:
             self.parser.print_help()
             exit(1)
 
+    def is_preview(self):
+        return self.args.preview
+
+    def is_compress(self):
+        return self.args.compress
+
+    def is_ignore_extra_keys(self):
+        return self.args.ignore_extra_keys
+
+    def is_pre_clean(self):
+        return self.args.pre_clean
+
 
 def usage_config_file():
     print("Usage-config-file:")
