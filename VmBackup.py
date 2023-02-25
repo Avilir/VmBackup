@@ -68,8 +68,6 @@ import XenAPI
 import argument
 from constnts import *
 
-# note - some NAS file servers may fail with ':', so change to your desired format
-BACKUP_DIR_PATTERN = "%s/backup-%04d-%02d-%02d-(%02d:%02d:%02d)"
 
 
 config = {}
@@ -603,47 +601,41 @@ def main(session):
 def get_vm_max_backups(vm_parm):
     # get max_backups from optional vm-export=VM-NAME:MAX-BACKUP override
     # NOTE - if not present then return config['max_backups']
-    if vm_parm.find(":") == -1:
-        return int(config["max_backups"])
-    else:
-        (vm_name, tmp_max_backups) = vm_parm.split(":")
-        tmp_max_backups = int(tmp_max_backups)
-        if tmp_max_backups > 0:
-            return tmp_max_backups
-        else:
-            return int(config["max_backups"])
+    data = vm_parm.split(":")
+    return (
+        int(data[1])
+        if len(data) > 1 and isinstance(data[1], int) and int(data[1]) > 0
+        else int(config["max_backups"])
+    )
 
 
 def is_vm_backups_valid(vm_parm):
-    if vm_parm.find(":") == -1:
-        # valid since we will use config['max_backups']
-        return True
-    else:
-        # a value has been specified - is it valid?
-        (vm_name, tmp_max_backups) = vm_parm.split(":")
-        if isinstance(tmp_max_backups, int):
-            return tmp_max_backups > 0
-        else:
-            return False
+    data = vm_parm.split(":")
+    results = True
+    if len(data) > 1:
+        results = data[1] > 0 if isinstance(data[1], int) else False
+    return results
 
 
 def get_vm_backups(vm_parm):
-    # get max_backups from optional vm-export=VM-NAME:MAX-BACKUP override
-    # NOTE - if not present then return empty string '' else return whatever specified after ':'
-    if vm_parm.find(":") == -1:
-        return ""
-    else:
-        (vm_name, tmp_max_backups) = vm_parm.split(":")
-        return tmp_max_backups
+    """
+    get max_backups from optional vm-export=VM-NAME:MAX-BACKUP override
+
+    NOTE - if not present then return empty string ''
+           else return whatever specified after ':'
+
+    Args:
+        vm_parm (str): vm-exporter configuration string
+    Return:
+        str : '' or the second part of the input string
+    """
+    data = vm_parm.split(":")
+    return data[1] if len(data) > 1 else ""
 
 
 def get_vm_name(vm_parm):
     # get vm_name from optional vm-export=VM-NAME:MAX-BACKUP override
-    if vm_parm.find(":") == -1:
-        return vm_parm
-    else:
-        (tmp_vm_name, tmp_max_backups) = vm_parm.split(":")
-        return tmp_vm_name
+    return vm_parm.split(':')[0]
 
 
 def verify_vm_name(tmp_vm_name):
@@ -878,16 +870,8 @@ def create_full_backup_dir(vm_base_path):
         # Create new dir - if throw exception then stop processing
         os.mkdir(vm_base_path)
 
-    date = datetime.datetime.today()
-    tmp_backup_dir = BACKUP_DIR_PATTERN % (
-        vm_base_path,
-        date.year,
-        date.month,
-        date.day,
-        date.hour,
-        date.minute,
-        date.second,
-    )
+    date = datetime.datetime.today().strftime("%Y-%m--%d-(%H:%M:%S)")
+    tmp_backup_dir = f"{vm_base_path}/backup-{date}"
     log("new backup_dir: %s" % tmp_backup_dir)
 
     if not os.path.exists(tmp_backup_dir):
