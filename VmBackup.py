@@ -1230,7 +1230,6 @@ def save_to_config_exclude(key, vm_name):
                 pass
                 # print ("VM not found -- ignore")
 
-
 def save_to_config_export(key, value):
     # save key/value in config[]
     # expected-key: vm-export or vdi-export
@@ -1776,6 +1775,7 @@ def usage_examples():
 
 
 if __name__ == "__main__":
+
     arg = argument.Arguments()
     arg.help_check()
     password = arg.get_password()
