@@ -97,15 +97,9 @@ class Arguments:
         """
         if self.args.config or self.args.example:
             if self.args.config:
-                print("Debugging - display the configuration")
-                pass
-                # TODO: update after creating the usage module
-                # usage.usage_config_file()
+                usage_config_file()
             if self.args.example:
-                print("Debugging - display the example")
-                pass
-                # TODO: update after creating the usage module
-                # usage.usage_examples()
+                usage_examples()
             sys.exit(1)
 
     def get_password(self):
@@ -130,6 +124,41 @@ class Arguments:
             print(f"Error: password file ({self.args.password_file}) doesn't exist !")
             self.parser.print_help()
             exit(1)
+
+
+def usage_config_file():
+    print("Usage-config-file:")
+    with open("example.cfg", "r") as f:
+        print(f.read())
+
+
+def usage_examples():
+    print(
+        """
+    Usage-examples: 
+
+      # config file 
+      ./VmBackup.py -p|--password password --config-file weekend.cfg 
+
+      # single VM name, which is case sensitive 
+      ./VmBackup.py -p|--password password --vm-selector DEV-mySql 
+
+      # single VM name using vdi-export instead of vm-export 
+      ./VmBackup.py -p|--password password --vm-selector vdi-export=DEV-mySql 
+
+      # single VM name with spaces in name 
+      ./VmBackup.py -p|--password password --vm-selector "DEV mySql"
+
+      # VM regular expression - which may be more than one VM 
+      ./VmBackup.py -p|--password password --vm-selector DEV-my.* 
+
+      # all VMs in pool 
+      ./VmBackup.py -p|--password password --vm-selector ".*"
+
+      # use password file + config file 
+      ./VmBackup.py --password-file /root/VmBackup.pass --config-file monthly.cfg 
+    """
+    )
 
 
 if __name__ == "__main__":

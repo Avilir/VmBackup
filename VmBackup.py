@@ -1230,6 +1230,7 @@ def save_to_config_exclude(key, vm_name):
                 pass
                 # print ("VM not found -- ignore")
 
+
 def save_to_config_export(key, value):
     # save key/value in config[]
     # expected-key: vm-export or vdi-export
@@ -1639,141 +1640,6 @@ def run(cmd, do_log=True):
     return proc.stdout
 
 
-def usage():
-    print("Usage-basic:")
-    print(
-        sys.argv[0],
-        " <password> <config-file|vm-selector> [preview] [other optional params]",
-    )
-    print()
-    print("see also: VmBackup.py help    - for additional parameter usage")
-    print("      or: VmBackup.py config  - for config-file parameter usage")
-    print("      or: VmBackup.py example - for some simple example usage")
-    print()
-
-
-def usage_help():
-    print("Usage-help:")
-    print(
-        sys.argv[0],
-        " <password|password-file> <config-file|vm-selector> [preview] [other optional params]",
-    )
-    print()
-    print("required params:")
-    print(
-        "  <password|password-file> - xenserver password or obscured password stored in password-file"
-    )
-    print("  <config-file|vm-selector> - several options:")
-    print("    config-file - a common choice for production crontab execution")
-    print(
-        "    vm-selector - a single vm name or a vm reqular expression that defaults to vm-export"
-    )
-    print(
-        "      note with vm-selector then config defaults are set from VmBackup.py default constantants"
-    )
-    print("    vm-export=vm-selector  - explicit vm-export")
-    print("    vdi-export=vm-selector - explicit vdi-export")
-    print()
-    print("optional params:")
-    print(
-        "  [preview] - preview/validate VmBackup config parameters and xenserver password"
-    )
-    print(
-        "  [compress=True|False] - only for vm-export functions automatic compression (default: False)"
-    )
-    print(
-        "  [ignore_extra_keys=True|False] - some config files may have extra params (default: False)"
-    )
-    print(
-        "  [pre_clean=True|False] - delete older backup(s) before performing new backup (default: False)"
-    )
-    print()
-    print("alternate form - create-password-file:")
-    print(sys.argv[0], " <password> create-password-file=filename")
-    print()
-    print(
-        "  create-password-file=filename - create an obscured password file with the specified password"
-    )
-    print("  note - password filename is relative to current path or absolute path.")
-    print()
-
-
-def usage_config_file():
-    print("Usage-config-file:")
-    print()
-    print("  # Example config file for VmBackup.py")
-    print()
-    print("  #### high level VmBackup settings ################")
-    print("  #### note - if any of these are not specified ####")
-    print("  ####   then VmBackup uses default constants   ####")
-    print()
-    print("  # Take Xen Pool DB backup: 0=No, 1=Yes (script default to 0=No)")
-    print("  pool_db_backup=0")
-    print()
-    print("  # How many backups to keep for each vm (script default to 4)")
-    print("  max_backups=3")
-    print()
-    print("  #Backup Directory path (script default /snapshots/BACKUPS)")
-    print("  backup_dir=/path/to/backupspace")
-    print()
-    print("  # applicable if vdi-export is used")
-    print("  # vdi_export_format either raw or vhd (script default to raw)")
-    print("  vdi_export_format=raw")
-    print()
-    print("  #### specific VMs backup settings ####")
-    print()
-    print(
-        "  # vm-export VM name-label of vm to backup. One per line - notice :max_backups override."
-    )
-    print("  vm-export=my-vm-name")
-    print("  vm-export=my-second-vm")
-    print("  vm-export=my-third-vm:3")
-    print()
-    print("  # special vdi-export - only backs up first disk. See README Documenation!")
-    print("  vdi-export=my-vm-name")
-    print()
-    print(
-        "  # vm-export using VM regular expression - notice DEV.* has :max_backups overide"
-    )
-    print("  vm-export=PROD.*")
-    print("  vm-export=DEV.*:2")
-    print()
-    print("  # exclude specific VMs")
-    print("  exclude=PROD-WinDomainController")
-    print("  exclude=DEV-DestructiveTest")
-    print()
-
-
-def usage_examples():
-    print("Usage-examples:")
-    print()
-    print("  # config file")
-    print("  ./VmBackup.py password weekend.cfg")
-    print()
-    print("  # single VM name, which is case sensitive")
-    print("  ./VmBackup.py password DEV-mySql")
-    print()
-    print("  # single VM name using vdi-export instead of vm-export")
-    print("  ./VmBackup.py password vdi-export=DEV-mySql")
-    print()
-    print("  # single VM name with spaces in name")
-    print('  ./VmBackup.py password "DEV mySql"')
-    print()
-    print("  # VM regular expression - which may be more than one VM")
-    print("  ./VmBackup.py password DEV-my.*")
-    print()
-    print("  # all VMs in pool")
-    print('  ./VmBackup.py password ".*"')
-    print()
-    print("Alternate form - create-password-file:")
-    print("  # create password file from command line password")
-    print("  ./VmBackup.py password create-password-file=/root/VmBackup.pass")
-    print()
-    print("  # use password file + config file")
-    print("  ./VmBackup.py /root/VmBackup.pass monthly.cfg")
-    print()
-
-
 if __name__ == "__main__":
 
     arg = argument.Arguments()
@@ -1813,7 +1679,7 @@ if __name__ == "__main__":
             (cmd_option, cmd_vm_name) = cmd_vm_name.strip().split("=")
         if cmd_option != "vm-export" and cmd_option != "vdi-export":
             print("ERROR invalid config/vm_name: %s" % cfg_file)
-            usage()
+            arg.parser.print_help()
             sys.exit(1)
         save_to_config_export(cmd_option, cmd_vm_name)
 
