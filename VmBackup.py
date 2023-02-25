@@ -66,24 +66,11 @@ import XenAPI
 
 # Local modules
 import argument
+from constnts import *
 
-############################# HARD CODED DEFAULTS
-# modify these hard coded default values, only used if not specified in config file
-DEFAULT_POOL_DB_BACKUP = 0
-DEFAULT_MAX_BACKUPS = 4
-DEFAULT_VDI_EXPORT_FORMAT = "raw"  # xe vdi-export options: 'raw' or 'vhd'
-DEFAULT_BACKUP_DIR = "/snapshots/BACKUPS"
-## DEFAULT_BACKUP_DIR = '\snapshots\BACKUPS' # alt for CIFS mounts
 # note - some NAS file servers may fail with ':', so change to your desired format
 BACKUP_DIR_PATTERN = "%s/backup-%04d-%02d-%02d-(%02d:%02d:%02d)"
-DEFAULT_STATUS_LOG = "/snapshots/NAUbackup/status.log"
 
-############################# OPTIONAL
-# optional email may be triggered by configure next 3 parameters then find MAIL_ENABLE and uncommenting out the desired lines
-MAIL_TO_ADDR = "your-email@your-domain"
-# note if MAIL_TO_ADDR has ipaddr then you may need to change the smtplib.SMTP() call
-MAIL_FROM_ADDR = "your-from-address@your-domain"
-MAIL_SMTP_SERVER = "your-mail-server"
 
 config = {}
 all_vms = []
@@ -98,7 +85,6 @@ expected_keys = [
     "exclude",
 ]
 message = ""
-xe_path = "/opt/xensource/bin"
 
 
 def main(session):
