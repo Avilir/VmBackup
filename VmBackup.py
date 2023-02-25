@@ -600,14 +600,6 @@ def main(session):
     ######################################################################
 
 
-def isInt(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        return False
-
-
 def get_vm_max_backups(vm_parm):
     # get max_backups from optional vm-export=VM-NAME:MAX-BACKUP override
     # NOTE - if not present then return config['max_backups']
@@ -629,7 +621,7 @@ def is_vm_backups_valid(vm_parm):
     else:
         # a value has been specified - is it valid?
         (vm_name, tmp_max_backups) = vm_parm.split(":")
-        if isInt(tmp_max_backups):
+        if isinstance(tmp_max_backups, int):
             return tmp_max_backups > 0
         else:
             return False
@@ -1097,7 +1089,7 @@ def is_xe_master():
 
 def is_config_valid():
 
-    if not isInt(config["pool_db_backup"]):
+    if not isinstance(config["pool_db_backup"], int):
         print(
             "ERROR: config pool_db_backup non-numeric -> %s" % config["pool_db_backup"]
         )
@@ -1109,7 +1101,7 @@ def is_config_valid():
         )
         return False
 
-    if not isInt(config["max_backups"]):
+    if not isinstance(config["max_backups"], int):
         print("ERROR: config max_backups non-numeric -> %s" % config["max_backups"])
         return False
 
