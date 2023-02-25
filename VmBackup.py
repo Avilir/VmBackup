@@ -1512,38 +1512,34 @@ def config_print():
     log("  vm-export: %s" % str)
 
 
+def status_log(server, op="begin", kind="vmbackup.py", status=""):
+    date = datetime.datetime.today().strftime("%y%m%d %H:%M:%S")
+    message_line = f"{date},{kind},{server},{op},{status}\n"
+    open(config["status_log"], "a", 0).write(message_line)
+
+
 def status_log_begin(server):
-    rec_begin = "%s,vmbackup.py,%s,begin\n" % (fmtDateTime(), server)
-    open(config["status_log"], "a", 0).write(rec_begin)
+    status_log(server)
 
 
 def status_log_end(server, status):
-    rec_end = "%s,vmbackup.py,%s,end,%s\n" % (fmtDateTime(), server, status)
-    open(config["status_log"], "a", 0).write(rec_end)
+    status_log(server, op="end", status=status)
 
 
 def status_log_vm_export_begin(server, status):
-    rec_begin = "%s,vm-export,%s,begin,%s\n" % (fmtDateTime(), server, status)
-    open(config["status_log"], "a", 0).write(rec_begin)
+    status_log(server, kind="vm-export", status=status)
 
 
 def status_log_vm_export_end(server, status):
-    rec_end = "%s,vm-export,%s,end,%s\n" % (fmtDateTime(), server, status)
-    open(config["status_log"], "a", 0).write(rec_end)
+    status_log(server, op="end", kind="vm-export", status=status)
 
 
 def status_log_vdi_export_begin(server, status):
-    rec_begin = "%s,vdi-export,%s,begin,%s\n" % (fmtDateTime(), server, status)
-    open(config["status_log"], "a", 0).write(rec_begin)
+    status_log(server, kind="vdi-export", status=status)
 
 
 def status_log_vdi_export_end(server, status):
-    rec_end = "%s,vdi-export,%s,end,%s\n" % (fmtDateTime(), server, status)
-    open(config["status_log"], "a", 0).write(rec_end)
-
-
-def fmtDateTime():
-    return datetime.datetime.today().strftime("%y%m%d %H:%M:%S")
+    status_log(server, op="end", kind="vdi-export", status=status)
 
 
 def log(mes, log_w_timestamp=True):
