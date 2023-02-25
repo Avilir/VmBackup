@@ -65,6 +65,7 @@ from email.mime.text import MIMEText
 import XenAPI
 
 # Local modules
+import argument
 
 ############################# HARD CODED DEFAULTS
 # modify these hard coded default values, only used if not specified in config file
@@ -1775,50 +1776,16 @@ def usage_examples():
 
 
 if __name__ == "__main__":
-    if "help" in sys.argv or "config" in sys.argv or "example" in sys.argv:
-        if "help" in sys.argv:
-            usage_help()
-        if "config" in sys.argv:
-            usage_config_file()
-        if "example" in sys.argv:
-            usage_examples()
-        sys.exit(1)
-    if len(sys.argv) < 3:
-        usage()
-        sys.exit(1)
-    password = sys.argv[1]
-    cfg_file = sys.argv[2]
-    # obscure password support
-    if os.path.exists(password):
-        password = base64.b64decode(open(password, "r").read())
-    if cfg_file.lower().startswith("create-password-file"):
-        array = sys.argv[2].strip().split("=")
-        open(array[1], "w").write(base64.b64encode(password))
-        print("password file saved to: %s" % array[1])
-        sys.exit(0)
+    arg = argument.Arguments()
+    arg.help_check()
+    password = arg.get_password()
+    cfg_file = arg.args.config_file or ""
 
     # load optional params
-    preview = False  # default
-    compress = False  # default
-    ignore_extra_keys = False  # default
-    pre_clean = False  # default
-
-    # loop through remaining optional args
-    arg_range = range(3, len(sys.argv))
-    for arg_ix in arg_range:
-        array = sys.argv[arg_ix].strip().split("=")
-        if array[0].lower() == "preview":
-            preview = True
-        elif array[0].lower() == "compress":
-            compress = array[1].lower() == "true"
-        elif array[0].lower() == "ignore_extra_keys":
-            ignore_extra_keys = array[1].lower() == "true"
-        elif array[0].lower() == "pre_clean":
-            pre_clean = array[1].lower() == "true"
-        else:
-            print("ERROR invalid parm: %s" % sys.argv[arg_ix])
-            usage()
-            sys.exit(1)
+    preview = arg.args.preview
+    compress = arg.args.compress
+    ignore_extra_keys = arg.args.ignore_extra_keys
+    pre_clean = arg.args.pre_clean
 
     # init vm-export/vdi-export/exclude in config list
     config["vm-export"] = []
@@ -1826,7 +1793,6 @@ if __name__ == "__main__":
     config["exclude"] = []
     warning_match = False
     error_regex = False
-
     all_vms = get_all_vms()
 
     # process config file
