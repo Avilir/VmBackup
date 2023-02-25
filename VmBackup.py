@@ -69,7 +69,6 @@ import argument
 from constnts import *
 
 
-
 config = {}
 all_vms = []
 expected_keys = [
@@ -635,7 +634,7 @@ def get_vm_backups(vm_parm):
 
 def get_vm_name(vm_parm):
     # get vm_name from optional vm-export=VM-NAME:MAX-BACKUP override
-    return vm_parm.split(':')[0]
+    return vm_parm.split(":")[0]
 
 
 def verify_vm_name(tmp_vm_name):
