@@ -916,16 +916,8 @@ def get_meta_path(base_path):
             log("ERROR creating directory %s : %s" % (base_path, error.as_string()))
             return False
 
-    date = datetime.datetime.today()
-    backup_path = "%s/pool_db_%04d%02d%02d-%02d%02d%02d.dump" % (
-        base_path,
-        date.year,
-        date.month,
-        date.day,
-        date.hour,
-        date.minute,
-        date.second,
-    )
+    date = datetime.datetime.today().strftime("%Y%m%d-%H%M%S")
+    backup_path = f"{base_path}/pool_db_{date}.dump"
 
     return backup_path
 
@@ -1576,36 +1568,19 @@ def status_log_vdi_export_end(server, status):
 
 
 def fmtDateTime():
-    date = datetime.datetime.today()
-    str = "%02d/%02d/%02d %02d:%02d:%02d" % (
-        date.year,
-        date.month,
-        date.day,
-        date.hour,
-        date.minute,
-        date.second,
-    )
-    return str
+    return datetime.datetime.today().strftime("%y%m%d %H:%M:%S")
 
 
 def log(mes, log_w_timestamp=True):
     # note - send_email uses message
     global message
 
-    date = datetime.datetime.today()
+    date = datetime.datetime.today().strftime("%y-%m-%d-(%H:%M:%S)")
     if log_w_timestamp:
-        str = "%02d-%02d-%02d-(%02d:%02d:%02d) - %s\n" % (
-            date.year,
-            date.month,
-            date.day,
-            date.hour,
-            date.minute,
-            date.second,
-            mes,
-        )
+        str = f"{date} - {mes}"
     else:
-        str = "%s\n" % mes
-    message += str
+        str = mes
+    message = f"{message}{str}\n"
 
     # if verbose: (old option, now always verbose)
     str = str.rstrip("\n")
