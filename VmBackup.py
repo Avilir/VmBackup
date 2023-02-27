@@ -61,7 +61,7 @@ import XenAPI
 
 # Local modules
 import argument
-from command import run, run_xe
+from command import run, run_xe, check_if_vm_is_running
 from constnts import *
 from logger import log, message
 
@@ -184,12 +184,7 @@ def main(session):
         # -----------------------------------------
         # --- begin vdi-export command sequence ---
         log("*** vdi-export begin xe command sequence")
-        # is vm currently running?
-        cmd = f'vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
-        if run_xe(cmd, out_format="rc") == 0:
-            log("vm is running")
-        else:
-            log("vm is NOT running")
+        check_if_vm_is_running(vm_name)
 
         # list the vdi we will backup
         cmd = f"vdi-list uuid={xvda_uuid}"
@@ -380,12 +375,7 @@ def main(session):
         # ----------------------------------------
         # --- begin vm-export command sequence ---
         log("*** vm-export begin xe command sequence")
-        # is vm currently running?
-        cmd = f'vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
-        if run_xe(cmd, out_format="rc") == 0:
-            log("vm is running")
-        else:
-            log("vm is NOT running")
+        check_if_vm_is_running(vm_name)
 
         # check for old vm-snapshot for this vm
         snap_name = f"RESTORE_{vm_name}"

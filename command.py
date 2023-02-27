@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os.path
+
 # Built-in modules
 import subprocess
 
@@ -77,8 +78,17 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
 
 
 def run_xe(cmd, out_format="lastline"):
-    command = os.path.join(constnts.xe_path, 'xe')
+    command = os.path.join(constnts.xe_path, "xe")
     return run(f"{command} {cmd}", do_log=False, out_format=out_format)
+
+
+def check_if_vm_is_running(vm_name):
+    # is vm currently running?
+    cmd = f'vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
+    if run_xe(cmd, out_format="rc") == 0:
+        log("vm is running")
+    else:
+        log("vm is NOT running")
 
 
 if __name__ == "__main__":
