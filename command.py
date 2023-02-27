@@ -44,7 +44,7 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
         cp = subprocess.run(command, timeout=timeout, **kwargs)
     except Exception:
         log(f"Failed to run the command : {' '.join(command)}")
-        return False
+        return ""
 
     output = cp.stdout.decode()
     err = cp.stderr.decode()
@@ -53,7 +53,7 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
         if do_log:
             log(f"Command finished with non zero ({cp.returncode}): {err}")
         output += f"Error in command ({cp.returncode}): {err}"
-        return False
+        return ""
 
     # TODO: adding more output_format types : json / yaml
 
@@ -66,14 +66,6 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
         output = output[-1]
 
     return output
-
-
-def run_get_lastline(cmd):
-    results = run(cmd=cmd, do_log=False, out_format="list")
-    if isinstance(results, list):
-        return results[-1]
-    else:
-        return ""
 
 
 if __name__ == "__main__":

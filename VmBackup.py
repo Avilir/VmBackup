@@ -62,7 +62,7 @@ import XenAPI
 
 # Local modules
 import argument
-from command import run, run_get_lastline
+from command import run
 from constnts import *
 from logger import log, message
 
@@ -103,7 +103,7 @@ def main(session):
     cmd = f"/bin/touch {touchfile}"
     log(cmd)
     res = run(cmd)
-    if not res:
+    if res == "":
         log("ERROR failed to write to backup directory area - FATAL ERROR")
         sys.exit(1)
     else:
@@ -212,7 +212,7 @@ def main(session):
             f"{xe_path}/xe vdi-list name-label='{snap_vdi_name_label}' params=uuid |"
             + " /bin/awk -F': ' '{print $2}' | /bin/grep '-'"
         )
-        old_snap_vdi_uuid = run_get_lastline(cmd)
+        old_snap_vdi_uuid = run(cmd, do_log=False, out_format="lastline")
         if old_snap_vdi_uuid != "":
             log(f"cleanup old-snap-vdi-uuid: {old_snap_vdi_uuid}")
             # vdi-destroy old vdi-snapshot
@@ -230,7 +230,7 @@ def main(session):
         # take a vdi-snapshot of this vm
         cmd = f"{xe_path}/xe vdi-snapshot uuid={xvda_uuid}"
         log(f"2.cmd: {cmd}")
-        snap_vdi_uuid = run_get_lastline(cmd)
+        snap_vdi_uuid = run(cmd, do_log=False, out_format="lastline")
         log(f"snap-uuid: {snap_vdi_uuid}")
         if snap_vdi_uuid == "":
             log(f"ERROR {cmd}")
@@ -395,7 +395,7 @@ def main(session):
             f"{xe_path}/xe vm-list name-label='{snap_name}' params=uuid | "
             + "/bin/awk -F': ' '{print $2}' | /bin/grep '-'"
         )
-        old_snap_vm_uuid = run_get_lastline(cmd)
+        old_snap_vm_uuid = run(cmd, do_log=False, out_format="lastline")
         if old_snap_vm_uuid != "":
             log(f"cleanup old-snap-vm-uuid: {old_snap_vm_uuid}")
             # vm-uninstall old vm-snapshot
@@ -419,7 +419,7 @@ def main(session):
         # take a vm-snapshot of this vm
         cmd = f'{xe_path}/xe vm-snapshot vm={vm_uuid} new-name-label="{snap_name}"'
         log(f"1.cmd: {cmd}")
-        snap_vm_uuid = run_get_lastline(cmd)
+        snap_vm_uuid = rune(cmd, do_log=False, out_format="lastline")
         log(f"snap-uuid: {snap_vm_uuid}")
         if snap_vm_uuid == "":
             log(f"ERROR {cmd}")
@@ -937,7 +937,7 @@ def get_os_version(uuid):
         f"{xe_path}/xe vm-list uuid='{uuid}' params=os-version | /bin/grep 'os-version' | "
         + "/bin/awk -F'name: ' '{print $2}' | /bin/awk -F'|' '{print $1}' | /bin/awk -F';' '{print $1}'"
     )
-    return run_get_lastline(cmd)
+    return run(cmd, do_log=False, out_format="lastline")
 
 
 def df_snapshots(log_msg):
@@ -1001,11 +1001,11 @@ def is_xe_master():
     # test to see if we are running on xe master
 
     cmd = f"{xe_path}/xe pool-list params=master --minimal"
-    master_uuid = run_get_lastline(cmd)
+    master_uuid = run(cmd, do_log=False, out_format="lastline")
 
     hostname = os.uname()[1]
     cmd = f"{xe_path}/xe host-list name-label={hostname} --minimal"
-    host_uuid = run_get_lastline(cmd)
+    host_uuid = run(cmd, do_log=False, out_format="lastline")
 
     if host_uuid == master_uuid:
         return True
@@ -1253,7 +1253,7 @@ def verify_vm_exist(vm_name):
 
 def get_all_vms():
     cmd = f"{xe_path}/xe vm-list is-control-domain=false is-a-snapshot=false params=name-label --minimal"
-    vms = run_get_lastline(cmd)
+    vms = run(cmd, do_log=False, out_format="lastline")
     return vms.split(",")
 
 
