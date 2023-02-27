@@ -47,9 +47,7 @@ Usage w/ config file for multiple vm backups, where you can specify either vm-ex
 """
 
 # Built-in modules
-import base64
 import datetime
-import os
 import re
 import shutil
 import smtplib
