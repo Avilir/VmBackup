@@ -61,7 +61,7 @@ import XenAPI
 
 # Local modules
 import argument
-from command import run, run_xe, check_if_vm_is_running
+from command import run, run_xe, check_if_vm_is_running, destroy_vdi_snapshot
 from constnts import *
 from logger import log, message
 
@@ -210,12 +210,7 @@ def main(session):
         if old_snap_vdi_uuid != "":
             log(f"cleanup old-snap-vdi-uuid: {old_snap_vdi_uuid}")
             # vdi-destroy old vdi-snapshot
-            cmd = f"vdi-destroy uuid={old_snap_vdi_uuid}"
-            log(f"cmd: xe {cmd}")
-            if run_xe(cmd, out_format="rc") != 0:
-                log(f"WARNING {cmd}")
-                this_status = "warning"
-                # non-fatal - finish processing for this vm
+            this_status = destroy_vdi_snapshot(old_snap_vdi_uuid)
 
         # === pre_cleanup code goes in here ===
         if arg.is_pre_clean():
@@ -263,12 +258,7 @@ def main(session):
             continue
 
         # cleanup: vdi-destroy vdi-snapshot
-        cmd = f"vdi-destroy uuid={snap_vdi_uuid}"
-        log(f"5.cmd: xe {cmd}")
-        if run_xe(cmd, out_format="rc") != 0:
-            log(f"WARNING {cmd}")
-            this_status = "warning"
-            # non-fatal - finsh processing for this vm
+        this_status = destroy_vdi_snapshot(snap_vdi_uuid, log_prefix="5.cmd")
 
         log("*** vdi-export end")
         # --- end vdi-export command sequence ---

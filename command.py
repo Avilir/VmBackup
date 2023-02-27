@@ -91,6 +91,16 @@ def check_if_vm_is_running(vm_name):
         log("vm is NOT running")
 
 
+def destroy_vdi_snapshot(snapshot_uuid, log_prefix="cmd"):
+    cmd = f"vdi-destroy uuid={snapshot_uuid}"
+    log(f"{log_prefix}: xe {cmd}")
+    if run_xe(cmd, out_format="rc") != 0:
+        log(f"WARNING xe {cmd}")
+        return "warning"
+    else:
+        return "success"
+
+
 if __name__ == "__main__":
     print(run("kuku", out_format="string"))
     print(run("ls -l", do_log=False, out_format="lastline"))
