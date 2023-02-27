@@ -53,8 +53,6 @@ import shutil
 import smtplib
 import socket
 import subprocess
-from subprocess import PIPE
-from subprocess import STDOUT
 import sys
 import time
 
@@ -64,7 +62,9 @@ import XenAPI
 
 # Local modules
 import argument
+from command import run
 from constnts import *
+from logger import log, message
 
 
 config = {}
@@ -79,11 +79,9 @@ expected_keys = [
     "vdi-export",
     "exclude",
 ]
-message = ""
 
 
 def main(session):
-
     success_cnt = 0
     warning_cnt = 0
     error_cnt = 0
@@ -800,7 +798,6 @@ def pre_cleanup(tmp_vm_backup_dir, tmp_vm_max_backups):
 
 # cleanup old unsuccessful backup and create new full_backup_dir
 def process_backup_dir(tmp_vm_backup_dir):
-
     if not os.path.exists(tmp_vm_backup_dir):
         # Create new dir - if throw exception then stop processing
         os.mkdir(tmp_vm_backup_dir)
@@ -902,7 +899,6 @@ def check_all_backups_success(path):
 
 
 def backup_pool_metadata(svr_name):
-
     # xe-backup-metadata can only run on master
     if not is_xe_master():
         log("** ignore: NOT master")
@@ -963,7 +959,6 @@ def df_snapshots(log_msg):
 
 
 def send_email(to, subject, body_fname):
-
     smtp_send_retries = 3
     smtp_send_attempt = 0
 
@@ -1029,7 +1024,6 @@ def is_xe_master():
 
 
 def is_config_valid():
-
     if not isinstance(config["pool_db_backup"], int):
         print(f"ERROR: config pool_db_backup non-numeric -> {config['pool_db_backup']}")
         return False
@@ -1120,7 +1114,6 @@ def save_to_config_exclude(key, vm_name):
     #        found_match = True
     #        config[key].append(vm)
     for vm in all_vms:
-
         if (isNormalVmName(vm_name) and vm_name == vm) or (
             not isNormalVmName(vm_name) and re.match(vm_name, vm)
         ):
@@ -1216,7 +1209,6 @@ def save_to_config_values(key, value):
 
 
 def verify_config_vms_exist():
-
     all_vms_exist = True
     # verify all VMs in vm/vdi-export exist
     vm_export_errors = verify_export_vms_exist()
@@ -1234,7 +1226,6 @@ def verify_config_vms_exist():
 
 
 def verify_export_vms_exist():
-
     vm_error = ""
     for vm_parm in config["vdi-export"]:
         # verify vm exists
@@ -1252,7 +1243,6 @@ def verify_export_vms_exist():
 
 
 def verify_exclude_vms_exist():
-
     vm_error = ""
     for vm_parm in config["exclude"]:
         # verify vm exists
@@ -1264,7 +1254,6 @@ def verify_exclude_vms_exist():
 
 
 def verify_vm_exist(vm_name):
-
     vm = session.xenapi.VM.get_by_name_label(vm_name)
     if len(vm) == 0:
         return False
@@ -1494,38 +1483,7 @@ def status_log_vdi_export_end(server, status):
     status_log(server, op="end", kind="vdi-export", status=status)
 
 
-def log(mes, log_w_timestamp=True):
-    # note - send_email uses message
-    global message
-
-    date = datetime.datetime.today().strftime("%y-%m-%d-(%H:%M:%S)")
-    if log_w_timestamp:
-        str = f"{date} - {mes}"
-    else:
-        str = mes
-    message = f"{message}{str}\n"
-
-    # if verbose: (old option, now always verbose)
-    str = str.rstrip("\n")
-    print(str)
-    sys.stdout.flush()
-    sys.stderr.flush()
-
-
-def run(cmd, do_log=True):
-    proc = subprocess.Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True)
-    res = proc.wait()
-    if res:
-        if do_log:
-            log(f"ERROR for cmd {cmd}")
-            log("".join(proc.stdout.readlines()))
-        return False
-
-    return proc.stdout
-
-
 if __name__ == "__main__":
-
     arg = argument.Arguments()
     arg.help_check()
     password = arg.get_password()
