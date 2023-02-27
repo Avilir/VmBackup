@@ -64,5 +64,14 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
     return output
 
 
+def run_get_lastline(cmd):
+    results = run(cmd=cmd, do_log=False, out_format="list")
+    if isinstance(results, list):
+        return results[-1]
+    else:
+        return ""
+
+
 if __name__ == "__main__":
     print(run("kuku", out_format="string"))
+    print(run_get_lastline('ls -l'))

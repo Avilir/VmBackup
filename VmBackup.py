@@ -62,7 +62,7 @@ import XenAPI
 
 # Local modules
 import argument
-from command import run
+from command import run, run_get_lastline
 from constnts import *
 from logger import log, message
 
@@ -930,16 +930,6 @@ def run_log_out_wait_rc(cmd, log_w_timestamp=True):
         log(line.rstrip(), log_w_timestamp)
         line = child.stdout.readline()
     return child.wait()
-
-
-def run_get_lastline(cmd):
-    # exec cmd - expect 1 line output from cmd
-    # return last line
-    f = os.popen(cmd)
-    resp = ""
-    for line in f.readlines():
-        resp = line.rstrip("\n")
-    return resp
 
 
 def get_os_version(uuid):
