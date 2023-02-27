@@ -61,7 +61,7 @@ import XenAPI
 
 # Local modules
 import argument
-from command import run
+from command import run, run_xe
 from constnts import *
 from logger import log, message
 
@@ -185,17 +185,17 @@ def main(session):
         # --- begin vdi-export command sequence ---
         log("*** vdi-export begin xe command sequence")
         # is vm currently running?
-        cmd = f'{xe_path}/xe vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
-        if run(cmd, log_w_timestamp=False, out_format="rc") == 0:
+        cmd = f'vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
+        if run_xe(cmd, out_format="rc") == 0:
             log("vm is running")
         else:
             log("vm is NOT running")
 
         # list the vdi we will backup
-        cmd = f"{xe_path}/xe vdi-list uuid={xvda_uuid}"
-        log(f"1.cmd: {cmd}")
-        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
-            log(f"ERROR {cmd}")
+        cmd = f"vdi-list uuid={xvda_uuid}"
+        log(f"1.cmd: xe {cmd}")
+        if run_xe(cmd, out_format="rc") != 0:
+            log(f"ERROR xe {cmd}")
             if config_specified:
                 status_log_vdi_export_end(server_name, f"VDI-LIST-FAIL {vm_name}")
             error_cnt += 1
@@ -208,16 +208,16 @@ def main(session):
         snap_vdi_name_label = re.sub(r" ", r"-", snap_vdi_name_label)
         log(f"check for prev-vdi-snapshot: {snap_vdi_name_label}")
         cmd = (
-            f"{xe_path}/xe vdi-list name-label='{snap_vdi_name_label}' params=uuid |"
+            f"vdi-list name-label='{snap_vdi_name_label}' params=uuid |"
             + " /bin/awk -F': ' '{print $2}' | /bin/grep '-'"
         )
-        old_snap_vdi_uuid = run(cmd, do_log=False, out_format="lastline")
+        old_snap_vdi_uuid = run_xe(cmd)
         if old_snap_vdi_uuid != "":
             log(f"cleanup old-snap-vdi-uuid: {old_snap_vdi_uuid}")
             # vdi-destroy old vdi-snapshot
-            cmd = f"{xe_path}/xe vdi-destroy uuid={old_snap_vdi_uuid}"
-            log(f"cmd: {cmd}")
-            if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
+            cmd = f"vdi-destroy uuid={old_snap_vdi_uuid}"
+            log(f"cmd: xe {cmd}")
+            if run_xe(cmd, out_format="rc") != 0:
                 log(f"WARNING {cmd}")
                 this_status = "warning"
                 # non-fatal - finish processing for this vm
@@ -227,12 +227,12 @@ def main(session):
             pre_cleanup(vm_backup_dir, vm_max_backups)
 
         # take a vdi-snapshot of this vm
-        cmd = f"{xe_path}/xe vdi-snapshot uuid={xvda_uuid}"
-        log(f"2.cmd: {cmd}")
-        snap_vdi_uuid = run(cmd, do_log=False, out_format="lastline")
+        cmd = f"vdi-snapshot uuid={xvda_uuid}"
+        log(f"2.cmd: xe {cmd}")
+        snap_vdi_uuid = run_xe(cmd)
         log(f"snap-uuid: {snap_vdi_uuid}")
         if snap_vdi_uuid == "":
-            log(f"ERROR {cmd}")
+            log(f"ERROR xe {cmd}")
             if config_specified:
                 status_log_vdi_export_end(server_name, f"VDI-SNAPSHOT-FAIL {vm_name}")
             error_cnt += 1
@@ -240,9 +240,9 @@ def main(session):
             continue
 
         # change vdi-snapshot to unique name-label for easy id and cleanup
-        cmd = f'{xe_path}/xe vdi-param-set uuid={snap_vdi_uuid} name-label="{snap_vdi_name_label}"'
-        log(f"3.cmd: {cmd}")
-        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
+        cmd = f'vdi-param-set uuid={snap_vdi_uuid} name-label="{snap_vdi_name_label}"'
+        log(f"3.cmd: xe {cmd}")
+        if run_xe(cmd, out_format="rc") != 0:
             log(f"ERROR {cmd}")
             if config_specified:
                 status_log_vdi_export_end(server_name, f"VDI-PARAM-SET-FAIL {vm_name}")
@@ -251,16 +251,16 @@ def main(session):
             continue
 
         # actual-backup: vdi-export vdi-snapshot
-        cmd = f"{xe_path}/xe vdi-export format={config['vdi_export_format']} uuid={snap_vdi_uuid}"
+        cmd = f"vdi-export format={config['vdi_export_format']} uuid={snap_vdi_uuid}"
         full_path_backup_file = os.path.join(
             full_backup_dir, vm_name + f'.config["vdi_export_format"]'
         )
         cmd = f'{cmd} filename="{full_path_backup_file}"'
-        log(f"4.cmd: {cmd}")
-        if run(cmd, log_w_timestamp=False, out_format="rc") == 0:
+        log(f"4.cmd: xe {cmd}")
+        if run_xe(cmd, out_format="rc") == 0:
             log("vdi-export success")
         else:
-            log(f"ERROR {cmd}")
+            log(f"ERROR xe {cmd}")
             if config_specified:
                 status_log_vdi_export_end(server_name, f"VDI-EXPORT-FAIL {vm_name}")
             error_cnt += 1
@@ -268,9 +268,9 @@ def main(session):
             continue
 
         # cleanup: vdi-destroy vdi-snapshot
-        cmd = f"{xe_path}/xe vdi-destroy uuid={snap_vdi_uuid}"
-        log(f"5.cmd: {cmd}")
-        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
+        cmd = f"vdi-destroy uuid={snap_vdi_uuid}"
+        log(f"5.cmd: xe {cmd}")
+        if run_xe(cmd, out_format="rc") != 0:
             log(f"WARNING {cmd}")
             this_status = "warning"
             # non-fatal - finsh processing for this vm
@@ -381,8 +381,8 @@ def main(session):
         # --- begin vm-export command sequence ---
         log("*** vm-export begin xe command sequence")
         # is vm currently running?
-        cmd = f'{xe_path}/xe vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
-        if run(cmd, log_w_timestamp=False, out_format="rc") == 0:
+        cmd = f'vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
+        if run_xe(cmd, out_format="rc") == 0:
             log("vm is running")
         else:
             log("vm is NOT running")
@@ -391,16 +391,16 @@ def main(session):
         snap_name = f"RESTORE_{vm_name}"
         log(f"check for prev-vm-snapshot: {snap_name}")
         cmd = (
-            f"{xe_path}/xe vm-list name-label='{snap_name}' params=uuid | "
+            f"vm-list name-label='{snap_name}' params=uuid | "
             + "/bin/awk -F': ' '{print $2}' | /bin/grep '-'"
         )
-        old_snap_vm_uuid = run(cmd, do_log=False, out_format="lastline")
+        old_snap_vm_uuid = run_xe(cmd)
         if old_snap_vm_uuid != "":
             log(f"cleanup old-snap-vm-uuid: {old_snap_vm_uuid}")
             # vm-uninstall old vm-snapshot
-            cmd = f"{xe_path}/xe vm-uninstall uuid={old_snap_vm_uuid} force=true"
-            log(f"cmd: {cmd}")
-            if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
+            cmd = f"vm-uninstall uuid={old_snap_vm_uuid} force=true"
+            log(f"cmd: xe {cmd}")
+            if run_xe(cmd, out_format="rc") != 0:
                 log(f"WARNING-ERROR {cmd}")
                 this_status = "warning"
                 if config_specified:
@@ -416,12 +416,12 @@ def main(session):
             pre_cleanup(vm_backup_dir, vm_max_backups)
 
         # take a vm-snapshot of this vm
-        cmd = f'{xe_path}/xe vm-snapshot vm={vm_uuid} new-name-label="{snap_name}"'
-        log(f"1.cmd: {cmd}")
-        snap_vm_uuid = run(cmd, do_log=False, out_format="lastline")
+        cmd = f'vm-snapshot vm={vm_uuid} new-name-label="{snap_name}"'
+        log(f"1.cmd: xe {cmd}")
+        snap_vm_uuid = run_xe(cmd)
         log(f"snap-uuid: {snap_vm_uuid}")
         if snap_vm_uuid == "":
-            log(f"ERROR {cmd}")
+            log(f"ERROR xe {cmd}")
             if config_specified:
                 status_log_vm_export_end(server_name, f"SNAPSHOT-FAIL {vm_name}")
             error_cnt += 1
@@ -429,9 +429,9 @@ def main(session):
             continue
 
         # change vm-snapshot so that it can be referenced by vm-export
-        cmd = f"{xe_path}/xe template-param-set is-a-template=false ha-always-run=false uuid={snap_vm_uuid}"
-        log(f"2.cmd: {cmd}")
-        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
+        cmd = f"template-param-set is-a-template=false ha-always-run=false uuid={snap_vm_uuid}"
+        log(f"2.cmd: xe {cmd}")
+        if run_xe(cmd, out_format="rc") != 0:
             log(f"ERROR {cmd}")
             if config_specified:
                 status_log_vm_export_end(
@@ -442,18 +442,18 @@ def main(session):
             continue
 
         # vm-export vm-snapshot
-        cmd = f"{xe_path}/xe vm-export uuid={snap_vm_uuid}"
+        cmd = f"vm-export uuid={snap_vm_uuid}"
         if arg.is_compress():
             full_path_backup_file = os.path.join(full_backup_dir, vm_name + ".xva.gz")
             cmd = f'{cmd} filename="{full_path_backup_file}" compress=true'
         else:
             full_path_backup_file = os.path.join(full_backup_dir, vm_name + ".xva")
             cmd = f'{cmd} filename="{full_path_backup_file}"'
-        log(f"3.cmd: {cmd}")
-        if run(cmd, log_w_timestamp=False, out_format="rc") == 0:
+        log(f"3.cmd: xe {cmd}")
+        if run_xe(cmd, out_format="rc") == 0:
             log("vm-export success")
         else:
-            log(f"ERROR {cmd}")
+            log(f"ERROR xe {cmd}")
             if config_specified:
                 status_log_vm_export_end(server_name, f"VM-EXPORT-FAIL {vm_name}")
             error_cnt += 1
@@ -461,9 +461,9 @@ def main(session):
             continue
 
         # vm-uninstall vm-snapshot
-        cmd = f"{xe_path}/xe vm-uninstall uuid={snap_vm_uuid} force=true"
-        log(f"4.cmd: {cmd}")
-        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
+        cmd = f"vm-uninstall uuid={snap_vm_uuid} force=true"
+        log(f"4.cmd: xe {cmd}")
+        if run_xe(cmd, out_format="rc") != 0:
             log(f"WARNING {cmd}")
             this_status = "warning"
             # non-fatal - finsh processing for this vm
@@ -624,11 +624,11 @@ def gather_vm_meta(vm_object, tmp_full_backup_dir):
 
     log("Exporting VM metadata XML info")
     cmd = (
-        f"{xe_path}/xe vm-export metadata=true uuid={vm_uuid} filename= "
+        f"vm-export metadata=true uuid={vm_uuid} filename= "
         + '| tar -xOf - | /usr/bin/xmllint -format - > "{tmp_full_backup_dir}/vm-metadata.xml"'
     )
-    if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
-        log(f"WARNING {cmd}")
+    if run_xe(cmd, out_format="rc") != 0:
+        log(f"WARNING xe {cmd}")
         this_status = "warning"
         # non-fatal - finish processing for this vm
 
@@ -906,9 +906,9 @@ def backup_pool_metadata(svr_name):
     metadata_base = os.path.join(config["backup_dir"], "METADATA_" + svr_name)
     metadata_file = get_meta_path(metadata_base)
 
-    cmd = f"{xe_path}/xe pool-dump-database file-name='{metadata_file}'"
+    cmd = f"pool-dump-database file-name='{metadata_file}'"
     log(cmd)
-    if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
+    if run_xe(cmd, out_format="rc") != 0:
         log("ERROR failed to backup pool metadata")
         return False
 
@@ -917,10 +917,10 @@ def backup_pool_metadata(svr_name):
 
 def get_os_version(uuid):
     cmd = (
-        f"{xe_path}/xe vm-list uuid='{uuid}' params=os-version | /bin/grep 'os-version' | "
+        f"vm-list uuid='{uuid}' params=os-version | /bin/grep 'os-version' | "
         + "/bin/awk -F'name: ' '{print $2}' | /bin/awk -F'|' '{print $1}' | /bin/awk -F';' '{print $1}'"
     )
-    return run(cmd, do_log=False, out_format="lastline")
+    return run_xe(cmd)
 
 
 def df_snapshots(log_msg):
@@ -983,12 +983,12 @@ def send_email(to, subject, body_fname):
 def is_xe_master():
     # test to see if we are running on xe master
 
-    cmd = f"{xe_path}/xe pool-list params=master --minimal"
-    master_uuid = run(cmd, do_log=False, out_format="lastline")
+    cmd = f"pool-list params=master --minimal"
+    master_uuid = run_xe(cmd)
 
     hostname = os.uname()[1]
-    cmd = f"{xe_path}/xe host-list name-label={hostname} --minimal"
-    host_uuid = run(cmd, do_log=False, out_format="lastline")
+    cmd = f"host-list name-label={hostname} --minimal"
+    host_uuid = run_xe(cmd)
 
     if host_uuid == master_uuid:
         return True
@@ -1235,8 +1235,8 @@ def verify_vm_exist(vm_name):
 
 
 def get_all_vms():
-    cmd = f"{xe_path}/xe vm-list is-control-domain=false is-a-snapshot=false params=name-label --minimal"
-    vms = run(cmd, do_log=False, out_format="lastline")
+    cmd = f"vm-list is-control-domain=false is-a-snapshot=false params=name-label --minimal"
+    vms = run_xe(cmd)
     return vms.split(",")
 
 
