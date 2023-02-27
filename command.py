@@ -1,11 +1,12 @@
 #!/usr/bin/env python
-
+import os.path
 # Built-in modules
 import subprocess
 
 # 3ed party modules
 
 # Local modules
+import constnts
 from logger import log
 
 
@@ -73,6 +74,11 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
         output = output[-1]
 
     return output
+
+
+def run_xe(cmd, out_format="lastline"):
+    command = os.path.join(constnts.xe_path, 'xe')
+    return run(f"{command} {cmd}", do_log=False, out_format=out_format)
 
 
 if __name__ == "__main__":
