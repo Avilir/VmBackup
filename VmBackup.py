@@ -418,7 +418,7 @@ def main(session):
         # take a vm-snapshot of this vm
         cmd = f'{xe_path}/xe vm-snapshot vm={vm_uuid} new-name-label="{snap_name}"'
         log(f"1.cmd: {cmd}")
-        snap_vm_uuid = rune(cmd, do_log=False, out_format="lastline")
+        snap_vm_uuid = run(cmd, do_log=False, out_format="lastline")
         log(f"snap-uuid: {snap_vm_uuid}")
         if snap_vm_uuid == "":
             log(f"ERROR {cmd}")
