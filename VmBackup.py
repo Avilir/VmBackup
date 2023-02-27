@@ -52,7 +52,6 @@ import re
 import shutil
 import smtplib
 import socket
-import subprocess
 import sys
 import time
 
@@ -62,7 +61,7 @@ import XenAPI
 
 # Local modules
 import argument
-from command import run
+from command import run, run_log_out_wait_rc
 from constnts import *
 from logger import log, message
 
@@ -914,22 +913,6 @@ def backup_pool_metadata(svr_name):
         return False
 
     return True
-
-
-# some run notes with xe return code and output examples
-#  xe vm-lisX -> error .returncode=1 w/ error msg
-#  xe vm-list name-label=BAD-vm-name -> success .returncode=0 with no output
-#  xe pool-dump-database file-name=<dup-file-already-exists>
-#     -> error .returncode=1 w/ error msg
-def run_log_out_wait_rc(cmd, log_w_timestamp=True):
-    child = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
-    )
-    line = child.stdout.readline()
-    while line:
-        log(line.rstrip(), log_w_timestamp)
-        line = child.stdout.readline()
-    return child.wait()
 
 
 def get_os_version(uuid):

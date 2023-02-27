@@ -68,6 +68,22 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
     return output
 
 
+# some run notes with xe return code and output examples
+#  xe vm-lisX -> error .returncode=1 w/ error msg
+#  xe vm-list name-label=BAD-vm-name -> success .returncode=0 with no output
+#  xe pool-dump-database file-name=<dup-file-already-exists>
+#     -> error .returncode=1 w/ error msg
+def run_log_out_wait_rc(cmd, log_w_timestamp=True):
+    child = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+    )
+    line = child.stdout.readline()
+    while line:
+        log(line.rstrip(), log_w_timestamp)
+        line = child.stdout.readline()
+    return child.wait()
+
+
 if __name__ == "__main__":
     print(run("kuku", out_format="string"))
     print(run_get_lastline("ls -l"))
