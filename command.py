@@ -57,10 +57,14 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
 
     # TODO: adding more output_format types : json / yaml
 
-    if out_format == "list":
+    if out_format in ["list", "lastline"]:
         output = output.split("\n")  # convert output to list
         if len(output) > 1:
             output.pop()  # remove last empty element from the list
+
+    if out_format == "lastline":
+        output = output[-1]
+
     return output
 
 
@@ -74,4 +78,5 @@ def run_get_lastline(cmd):
 
 if __name__ == "__main__":
     print(run("kuku", out_format="string"))
-    print(run_get_lastline('ls -l'))
+    print(run_get_lastline("ls -l"))
+    print(run("ls -l", do_log=False, out_format="lastline"))
