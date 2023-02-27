@@ -846,7 +846,7 @@ def get_meta_path(base_path):
         try:
             os.mkdir(base_path)
         except OSError as error:
-            log(f"ERROR creating directory {base_path} : {error.as_string()}")
+            log(f"ERROR creating directory {base_path} : {str(error)}")
             return False
 
     date = datetime.datetime.today().strftime("%Y%m%d-%H%M%S")
@@ -931,7 +931,7 @@ def run_log_out_wait_rc(cmd, log_w_timestamp=True):
     )
     line = child.stdout.readline()
     while line:
-        log(line.rstrip("\n"), log_w_timestamp)
+        log(line.rstrip(), log_w_timestamp)
         line = child.stdout.readline()
     return child.wait()
 
@@ -1008,7 +1008,7 @@ def send_email(to, subject, body_fname):
             print(f"Exception: socket.error -  {e}")
             time.sleep(5)
         except smtplib.SMTPException as e:
-            print(f"Exception: SMTPException - {e.message}")
+            print(f"Exception: SMTPException - {str(e)}")
             time.sleep(5)
 
 
