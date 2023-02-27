@@ -61,7 +61,7 @@ import XenAPI
 
 # Local modules
 import argument
-from command import run, run_log_out_wait_rc
+from command import run
 from constnts import *
 from logger import log, message
 
@@ -186,7 +186,7 @@ def main(session):
         log("*** vdi-export begin xe command sequence")
         # is vm currently running?
         cmd = f'{xe_path}/xe vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
-        if run_log_out_wait_rc(cmd) == 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") == 0:
             log("vm is running")
         else:
             log("vm is NOT running")
@@ -194,7 +194,7 @@ def main(session):
         # list the vdi we will backup
         cmd = f"{xe_path}/xe vdi-list uuid={xvda_uuid}"
         log(f"1.cmd: {cmd}")
-        if run_log_out_wait_rc(cmd) != 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
             log(f"ERROR {cmd}")
             if config_specified:
                 status_log_vdi_export_end(server_name, f"VDI-LIST-FAIL {vm_name}")
@@ -217,7 +217,7 @@ def main(session):
             # vdi-destroy old vdi-snapshot
             cmd = f"{xe_path}/xe vdi-destroy uuid={old_snap_vdi_uuid}"
             log(f"cmd: {cmd}")
-            if run_log_out_wait_rc(cmd) != 0:
+            if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
                 log(f"WARNING {cmd}")
                 this_status = "warning"
                 # non-fatal - finish processing for this vm
@@ -242,7 +242,7 @@ def main(session):
         # change vdi-snapshot to unique name-label for easy id and cleanup
         cmd = f'{xe_path}/xe vdi-param-set uuid={snap_vdi_uuid} name-label="{snap_vdi_name_label}"'
         log(f"3.cmd: {cmd}")
-        if run_log_out_wait_rc(cmd) != 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
             log(f"ERROR {cmd}")
             if config_specified:
                 status_log_vdi_export_end(server_name, f"VDI-PARAM-SET-FAIL {vm_name}")
@@ -257,7 +257,7 @@ def main(session):
         )
         cmd = f'{cmd} filename="{full_path_backup_file}"'
         log(f"4.cmd: {cmd}")
-        if run_log_out_wait_rc(cmd) == 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") == 0:
             log("vdi-export success")
         else:
             log(f"ERROR {cmd}")
@@ -270,7 +270,7 @@ def main(session):
         # cleanup: vdi-destroy vdi-snapshot
         cmd = f"{xe_path}/xe vdi-destroy uuid={snap_vdi_uuid}"
         log(f"5.cmd: {cmd}")
-        if run_log_out_wait_rc(cmd) != 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
             log(f"WARNING {cmd}")
             this_status = "warning"
             # non-fatal - finsh processing for this vm
@@ -382,7 +382,7 @@ def main(session):
         log("*** vm-export begin xe command sequence")
         # is vm currently running?
         cmd = f'{xe_path}/xe vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
-        if run_log_out_wait_rc(cmd) == 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") == 0:
             log("vm is running")
         else:
             log("vm is NOT running")
@@ -400,7 +400,7 @@ def main(session):
             # vm-uninstall old vm-snapshot
             cmd = f"{xe_path}/xe vm-uninstall uuid={old_snap_vm_uuid} force=true"
             log(f"cmd: {cmd}")
-            if run_log_out_wait_rc(cmd) != 0:
+            if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
                 log(f"WARNING-ERROR {cmd}")
                 this_status = "warning"
                 if config_specified:
@@ -431,7 +431,7 @@ def main(session):
         # change vm-snapshot so that it can be referenced by vm-export
         cmd = f"{xe_path}/xe template-param-set is-a-template=false ha-always-run=false uuid={snap_vm_uuid}"
         log(f"2.cmd: {cmd}")
-        if run_log_out_wait_rc(cmd) != 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
             log(f"ERROR {cmd}")
             if config_specified:
                 status_log_vm_export_end(
@@ -450,7 +450,7 @@ def main(session):
             full_path_backup_file = os.path.join(full_backup_dir, vm_name + ".xva")
             cmd = f'{cmd} filename="{full_path_backup_file}"'
         log(f"3.cmd: {cmd}")
-        if run_log_out_wait_rc(cmd) == 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") == 0:
             log("vm-export success")
         else:
             log(f"ERROR {cmd}")
@@ -463,7 +463,7 @@ def main(session):
         # vm-uninstall vm-snapshot
         cmd = f"{xe_path}/xe vm-uninstall uuid={snap_vm_uuid} force=true"
         log(f"4.cmd: {cmd}")
-        if run_log_out_wait_rc(cmd) != 0:
+        if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
             log(f"WARNING {cmd}")
             this_status = "warning"
             # non-fatal - finsh processing for this vm
@@ -627,7 +627,7 @@ def gather_vm_meta(vm_object, tmp_full_backup_dir):
         f"{xe_path}/xe vm-export metadata=true uuid={vm_uuid} filename= "
         + '| tar -xOf - | /usr/bin/xmllint -format - > "{tmp_full_backup_dir}/vm-metadata.xml"'
     )
-    if run_log_out_wait_rc(cmd) != 0:
+    if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
         log(f"WARNING {cmd}")
         this_status = "warning"
         # non-fatal - finish processing for this vm
@@ -908,7 +908,7 @@ def backup_pool_metadata(svr_name):
 
     cmd = f"{xe_path}/xe pool-dump-database file-name='{metadata_file}'"
     log(cmd)
-    if run_log_out_wait_rc(cmd) != 0:
+    if run(cmd, log_w_timestamp=False, out_format="rc") != 0:
         log("ERROR failed to backup pool metadata")
         return False
 
