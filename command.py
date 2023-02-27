@@ -38,12 +38,15 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
         out_format = kwargs["out_format"]
         del kwargs["out_format"]
 
-    log(f"Going to format output as {out_format}")
-    log(f"Going to run {cmd} with timeout of {timeout} seconds")
+    if do_log:
+        log(f"Going to format output as {out_format}")
+        log(f"Going to run {cmd} with timeout of {timeout} seconds")
     try:
         cp = subprocess.run(command, timeout=timeout, **kwargs)
-    except Exception:
-        log(f"Failed to run the command : {' '.join(command)}")
+    except Exception as e:
+        if do_log:
+            log(f"Failed to run the command : {' '.join(command)}")
+            log(f"Exit with exception : {e}")
         return ""
 
     output = cp.stdout.decode()
@@ -53,6 +56,10 @@ def run(cmd, do_log=True, timeout=600, out_format="string", **kwargs):
         if do_log:
             log(f"Command finished with non zero ({cp.returncode}): {err}")
         output += f"Error in command ({cp.returncode}): {err}"
+
+        if out_format == "rc":
+            return cp.returncode
+
         return ""
 
     # TODO: adding more output_format types : json / yaml
@@ -86,5 +93,4 @@ def run_log_out_wait_rc(cmd, log_w_timestamp=True):
 
 if __name__ == "__main__":
     print(run("kuku", out_format="string"))
-    print(run_get_lastline("ls -l"))
     print(run("ls -l", do_log=False, out_format="lastline"))
