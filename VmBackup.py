@@ -61,7 +61,7 @@ import XenAPI
 
 # Local modules
 import argument
-from command import run, run_xe, check_if_vm_is_running, destroy_vdi_snapshot
+from command import run, run_df, run_xe, check_if_vm_is_running, destroy_vdi_snapshot
 from constnts import *
 from logger import log, message
 
@@ -111,7 +111,7 @@ def main(session):
         log("Success: backup directory area is writable")
 
     log("===========================")
-    df_snapshots(f"Space before backups: df -Th {config['backup_dir']}")
+    run_df("Space before backups:", config["backup_dir"])
 
     if int(config["pool_db_backup"]):
         log("*** begin backup_pool_metadata ***")
@@ -504,7 +504,7 @@ def main(session):
     ######################################################################
 
     log("===========================")
-    df_snapshots(f"Space status: df -Th {config['backup_dir']}")
+    run_df("Space status:", config["backup_dir"])
 
     # gather a final VmBackup.py status
     summary = f"S:{success_cnt} W:{warning_cnt} E:{error_cnt}"
@@ -901,14 +901,6 @@ def get_os_version(uuid):
         + "/bin/awk -F'name: ' '{print $2}' | /bin/awk -F'|' '{print $1}' | /bin/awk -F';' '{print $1}'"
     )
     return run_xe(cmd)
-
-
-def df_snapshots(log_msg):
-    log(log_msg)
-    f = os.popen(f"df -Th {config['backup_dir']}")
-    for line in f.readlines():
-        line = line.rstrip("\n")
-        log(line)
 
 
 def send_email(to, subject, body_fname):

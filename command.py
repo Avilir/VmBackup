@@ -82,6 +82,12 @@ def run_xe(cmd, out_format="lastline"):
     return run(f"{command} {cmd}", do_log=False, out_format=out_format)
 
 
+def run_df(log_msg, path):
+    log(log_msg)
+    results = run(f"df -Th {path}")
+    log(results)
+
+
 def check_if_vm_is_running(vm_name):
     # is vm currently running?
     cmd = f'vm-list name-label="{vm_name}" params=power-state | /bin/grep running'
