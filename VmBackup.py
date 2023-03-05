@@ -48,6 +48,7 @@ Usage w/ config file for multiple vm backups, where you can specify either vm-ex
 
 # Built-in modules
 import datetime
+from pathlib import Path
 import re
 import shutil
 import smtplib
@@ -90,17 +91,13 @@ def main(session):
     log("===========================")
     log(f"Check if backup directory {config.data('backup_dir')} is writable ...")
     touchfile = os.path.join(config.data("backup_dir"), "00VMbackupWriteTest")
-
-    cmd = f"/bin/touch {touchfile}"
-    log(cmd)
-    res = run(cmd)
-    if res == "":
+    try:
+        Path(touchfile).touch()
+    except Exception:
         log("ERROR failed to write to backup directory area - FATAL ERROR")
         sys.exit(1)
-    else:
-        cmd = f'/bin/rm -f "{touchfile}"'
-        run(cmd)
-        log("Success: backup directory area is writable")
+    os.remove(touchfile)
+    log("Success: backup directory area is writable")
 
     log("===========================")
     run_df("Space before backups:", config.data("backup_dir"))
@@ -1222,26 +1219,16 @@ if __name__ == "__main__":
     if not verify_config_vms_exist():
         # error message(s) printed in verify_config_vms_exist
         sys.exit(1)
-    # OPTIONAL
-    # show_vms_not_in_backup()
-
-    # todo - these warning/errors are a little confusing, clean these up later
-    if arg.is_preview():
-        warning = ""
-        if warning_match:
-            warning = " - WARNINGS found (see above)"
-        if error_regex:
-            log(f"ERROR regex errors found (see above) {warning}")
-            sys.exit(1)
-        log(f"SUCCESS preview of parameters {warning}")
-        sys.exit(1)
 
     warning = ""
     if warning_match:
         warning = " - WARNINGS found (see above)"
-    log(f"SUCCESS check of parameters {warning}")
     if error_regex:
         log("ERROR regex errors found (see above)")
+        sys.exit(1)
+    log(f"SUCCESS preview / check of parameters {warning}")
+
+    if arg.is_preview():
         sys.exit(1)
 
     try:
