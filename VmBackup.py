@@ -957,17 +957,12 @@ def verify_config_vms_exist():
 
 def verify_export_vms_exist():
     vm_error = ""
-    for vm_parm in config.data("vdi-export"):
-        # verify vm exists
-        vm_name_part = get_vm_name(vm_parm)
-        if not verify_vm_exist(vm_name_part):
-            vm_error += vm_name_part + " "
-
-    for vm_parm in config.data("vm-export"):
-        # verify vm exists
-        vm_name_part = get_vm_name(vm_parm)
-        if not verify_vm_exist(vm_name_part):
-            vm_error += vm_name_part + " "
+    for key in ["vdi-export", "vm-export"]:
+        for vm_parm in config.data(key):
+            # verify vm exists
+            vm_name_part = get_vm_name(vm_parm)
+            if not verify_vm_exist(vm_name_part):
+                vm_error += vm_name_part + " "
 
     return vm_error
 
