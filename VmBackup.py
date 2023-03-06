@@ -48,6 +48,7 @@ Usage w/ config file for multiple vm backups, where you can specify either vm-ex
 
 # Built-in modules
 import datetime
+from pathlib import Path
 import re
 import shutil
 import smtplib
@@ -62,22 +63,14 @@ import XenAPI
 # Local modules
 import argument
 from command import run, run_df, run_xe, check_if_vm_is_running, destroy_vdi_snapshot
+import configuration
 from constnts import *
 from logger import log, message
 
 
-config = {}
-all_vms = []
-expected_keys = [
-    "pool_db_backup",
-    "max_backups",
-    "backup_dir",
-    "status_log",
-    "vdi_export_format",
-    "vm-export",
-    "vdi-export",
-    "exclude",
-]
+config = configuration.Config()
+
+session = None  # Placeholder variable, real value will set in the main function
 
 
 def main(session):
@@ -96,24 +89,20 @@ def main(session):
     log(f"VmBackup running on {server_name} ...")
 
     log("===========================")
-    log(f"Check if backup directory {config['backup_dir']} is writable ...")
-    touchfile = os.path.join(config["backup_dir"], "00VMbackupWriteTest")
-
-    cmd = f"/bin/touch {touchfile}"
-    log(cmd)
-    res = run(cmd)
-    if res == "":
+    log(f"Check if backup directory {config.data('backup_dir')} is writable ...")
+    touchfile = os.path.join(config.data("backup_dir"), "00VMbackupWriteTest")
+    try:
+        Path(touchfile).touch()
+    except Exception:
         log("ERROR failed to write to backup directory area - FATAL ERROR")
         sys.exit(1)
-    else:
-        cmd = f'/bin/rm -f "{touchfile}"'
-        res = run(cmd)
-        log("Success: backup directory area is writable")
+    os.remove(touchfile)
+    log("Success: backup directory area is writable")
 
     log("===========================")
-    run_df("Space before backups:", config["backup_dir"])
+    run_df("Space before backups:", config.data("backup_dir"))
 
-    if int(config["pool_db_backup"]):
+    if int(config.data("pool_db_backup")):
         log("*** begin backup_pool_metadata ***")
         if not backup_pool_metadata(server_name):
             error_cnt += 1
@@ -121,7 +110,7 @@ def main(session):
     ######################################################################
     # Iterate through all vdi-export= in cfg
     log("************ vdi-export= ***************")
-    for vm_parm in config["vdi-export"]:
+    for vm_parm in config.data("vdi-export"):
         log(f"*** vdi-export begin {vm_parm}")
         beginTime = datetime.datetime.now()
         this_status = "success"
@@ -147,7 +136,7 @@ def main(session):
             # next vm
             continue
 
-        vm_backup_dir = os.path.join(config["backup_dir"], vm_name)
+        vm_backup_dir = os.path.join(config.data("backup_dir"), vm_name)
         # cleanup any old unsuccessful backups and create new full_backup_dir
         full_backup_dir = process_backup_dir(vm_backup_dir)
 
@@ -241,7 +230,9 @@ def main(session):
             continue
 
         # actual-backup: vdi-export vdi-snapshot
-        cmd = f"vdi-export format={config['vdi_export_format']} uuid={snap_vdi_uuid}"
+        cmd = (
+            f"vdi-export format={config.data('vdi_export_format')} uuid={snap_vdi_uuid}"
+        )
         full_path_backup_file = os.path.join(
             full_backup_dir, vm_name + f'.config["vdi_export_format"]'
         )
@@ -318,7 +309,7 @@ def main(session):
     ######################################################################
     # Iterate through all vm-export= in cfg
     log("************ vm-export= ***************")
-    for vm_parm in config["vm-export"]:
+    for vm_parm in config.data("vm-export"):
         log(f"*** vm-export begin {vm_parm}")
         beginTime = datetime.datetime.now()
         this_status = "success"
@@ -340,7 +331,7 @@ def main(session):
             # next vm
             continue
 
-        vm_backup_dir = os.path.join(config["backup_dir"], vm_name)
+        vm_backup_dir = os.path.join(config.data("backup_dir"), vm_name)
         # cleanup any old unsuccessful backups and create new full_backup_dir
         full_backup_dir = process_backup_dir(vm_backup_dir)
 
@@ -504,11 +495,11 @@ def main(session):
     ######################################################################
 
     log("===========================")
-    run_df("Space status:", config["backup_dir"])
+    run_df("Space status:", config.data("backup_dir"))
 
     # gather a final VmBackup.py status
     summary = f"S:{success_cnt} W:{warning_cnt} E:{error_cnt}"
-    status_log = config["status_log"]
+    status_log = config.data("status_log")
     if error_cnt > 0:
         if config_specified:
             status_log_end(server_name, f"ERROR,{summary}")
@@ -542,32 +533,8 @@ def get_vm_max_backups(vm_parm):
     return (
         int(data[1])
         if len(data) > 1 and isinstance(data[1], int) and int(data[1]) > 0
-        else int(config["max_backups"])
+        else int(config.data("max_backups"))
     )
-
-
-def is_vm_backups_valid(vm_parm):
-    data = vm_parm.split(":")
-    results = True
-    if len(data) > 1:
-        results = data[1] > 0 if isinstance(data[1], int) else False
-    return results
-
-
-def get_vm_backups(vm_parm):
-    """
-    get max_backups from optional vm-export=VM-NAME:MAX-BACKUP override
-
-    NOTE - if not present then return empty string ''
-           else return whatever specified after ':'
-
-    Args:
-        vm_parm (str): vm-exporter configuration string
-    Return:
-        str : '' or the second part of the input string
-    """
-    data = vm_parm.split(":")
-    return data[1] if len(data) > 1 else ""
 
 
 def get_vm_name(vm_parm):
@@ -883,7 +850,7 @@ def backup_pool_metadata(svr_name):
         log("** ignore: NOT master")
         return True
 
-    metadata_base = os.path.join(config["backup_dir"], "METADATA_" + svr_name)
+    metadata_base = os.path.join(config.data("backup_dir"), "METADATA_" + svr_name)
     metadata_file = get_meta_path(metadata_base)
 
     cmd = f"pool-dump-database file-name='{metadata_file}'"
@@ -968,191 +935,6 @@ def is_xe_master():
     return False
 
 
-def is_config_valid():
-    if not isinstance(config["pool_db_backup"], int):
-        print(f"ERROR: config pool_db_backup non-numeric -> {config['pool_db_backup']}")
-        return False
-
-    if int(config["pool_db_backup"]) != 0 and int(config["pool_db_backup"]) != 1:
-        print(
-            f"ERROR: config pool_db_backup out of range -> {config['pool_db_backup']}"
-        )
-        return False
-
-    if not isinstance(config["max_backups"], int):
-        print(f"ERROR: config max_backups non-numeric -> {config['max_backups']}")
-        return False
-
-    if int(config["max_backups"]) < 1:
-        print(f"ERROR: config max_backups out of range -> {config['max_backups']}")
-        return False
-
-    if config["vdi_export_format"] != "raw" and config["vdi_export_format"] != "vhd":
-        print(
-            f"ERROR: config vdi_export_format invalid -> {config['vdi_export_format']}"
-        )
-        return False
-
-    if not os.path.exists(config["backup_dir"]):
-        print(f"ERROR: config backup_dir does not exist -> {config['backup_dir']}")
-        return False
-
-    tmp_return = True
-    for vm_parm in config["vdi-export"]:
-        if not is_vm_backups_valid(vm_parm):
-            print(f"ERROR: vm_max_backup is invalid - {vm_parm}")
-            tmp_return = False
-
-    for vm_parm in config["vm-export"]:
-        if not is_vm_backups_valid(vm_parm):
-            print(f"ERROR: vm_max_backup is invalid - {vm_parm}")
-            tmp_return = False
-
-    return tmp_return
-
-
-def config_load(path):
-    return_value = True
-    config_file = open(path, "r")
-    for line in config_file:
-        if not line.startswith("#") and len(line.strip()) > 0:
-            (key, value) = line.strip().split("=")
-            key = key.strip()
-            value = value.strip()
-
-            # check for valid keys
-            if not key in expected_keys:
-                if arg.is_ignore_extra_keys():
-                    log(f"ignoring config key: {key}")
-                else:
-                    print(f"***ERROR unexpected config key: {key}")
-                    return_value = False
-
-            if key == "exclude":
-                save_to_config_exclude(key, value)
-            elif key in ["vm-export", "vdi-export"]:
-                save_to_config_export(key, value)
-            else:
-                # all other key's
-                save_to_config_values(key, value)
-
-    return return_value
-
-
-def save_to_config_exclude(key, vm_name):
-    # save key/value in config[]
-    # expected-key: exclude
-    # expected-value: vmname (with or w/o regex)
-    global warning_match
-    global error_regex
-    found_match = False
-    # Fail fast if exclude param given but empty to prevent from exluding all VMs
-    if vm_name == "":
-        return
-    if not isNormalVmName(vm_name) and not isRegExValid(vm_name):
-        log(f"***ERROR - invalid regex: {key}={vm_name}")
-        error_regex = True
-        return
-    # for vm in all_vms:
-    #    if ((isNormalVmName(vm_name) and vm_name == vm) or
-    #        (not isNormalVmName(vm_name) and re.match(vm_name, vm))):
-    #        found_match = True
-    #        config[key].append(vm)
-    for vm in all_vms:
-        if (isNormalVmName(vm_name) and vm_name == vm) or (
-            not isNormalVmName(vm_name) and re.match(vm_name, vm)
-        ):
-            found_match = True
-            config[key].append(vm)
-
-    if not found_match:
-        log(f"***WARNING - vm not found: {key}={vm_name}")
-        warning_match = True
-    else:
-        for vm in config[key]:
-            try:
-                all_vms.remove(vm)
-            except:
-                pass
-                # print ("VM not found -- ignore")
-
-
-def save_to_config_export(key, value):
-    # save key/value in config[]
-    # expected-key: vm-export or vdi-export
-    # expected-value: vmname (with or w/o regex) or vmname:#
-    global warning_match
-    global error_regex
-    found_match = False
-
-    # Fail fast if all VMs excluded or if no VMs exist in the pool
-    if all_vms == []:
-        return
-
-    # Fail fast if vdi-export given but empty to prevent from matching all VMs first-come-first-served style
-    # NOTE: This checks for the vdi-export key only so leaving vm-export empty will still default to all VMs
-    if key == "vdi-export" and value == "":
-        return
-
-    # Evaluate key/value pairs if we get this far
-    values = value.split(":")
-    vm_name_part = values[0]
-    vm_backups_part = ""
-    if len(values) > 1:
-        vm_backups_part = values[1]
-    if not isNormalVmName(vm_name_part) and not isRegExValid(vm_name_part):
-        log(f"***ERROR - invalid regex: {key}={value}")
-        error_regex = True
-        return
-    for vm in all_vms:
-        if (isNormalVmName(vm_name_part) and vm_name_part == vm) or (
-            not isNormalVmName(vm_name_part) and re.match(vm_name_part, vm)
-        ):
-            if vm_backups_part == "":
-                new_value = vm
-            else:
-                new_value = f"{vm}:{vm_backups_part}"
-            found_match = True
-            # Check if vdi-export already has the vm mentioned and, if so, do not add this vm to vm-export
-            if key == "vm-export" and vm in config["vdi-export"]:
-                continue
-            else:
-                config[key].append(new_value)
-    if not found_match:
-        log(f"***WARNING - vm not found: {key}={value}")
-        warning_match = True
-
-
-def isNormalVmName(str):
-    if re.match("^[\w\s\-\_]+$", str) is not None:
-        # normal vm name such as 'PRD-test123'
-        return True
-    else:
-        # verses vm name using regex such as '^PRD-test[1-2]$'
-        return False
-
-
-def isRegExValid(text):
-    try:
-        re.compile(text)
-        return True
-    except re.error:
-        return False
-
-
-def save_to_config_values(key, value):
-    # save key/value in config[]
-    # expected-key: any key except vm-export or vdi-export or exclude
-    # expected-value: any value
-    if key in config.keys():
-        if type(config[key]) is list:
-            config[key].append(value)
-        else:
-            config[key] = [config[key], value]
-    else:
-        config[key] = value
-
-
 def verify_config_vms_exist():
     all_vms_exist = True
     # verify all VMs in vm/vdi-export exist
@@ -1172,24 +954,19 @@ def verify_config_vms_exist():
 
 def verify_export_vms_exist():
     vm_error = ""
-    for vm_parm in config["vdi-export"]:
-        # verify vm exists
-        vm_name_part = get_vm_name(vm_parm)
-        if not verify_vm_exist(vm_name_part):
-            vm_error += vm_name_part + " "
-
-    for vm_parm in config["vm-export"]:
-        # verify vm exists
-        vm_name_part = get_vm_name(vm_parm)
-        if not verify_vm_exist(vm_name_part):
-            vm_error += vm_name_part + " "
+    for key in ["vdi-export", "vm-export"]:
+        for vm_parm in config.data(key):
+            # verify vm exists
+            vm_name_part = get_vm_name(vm_parm)
+            if not verify_vm_exist(vm_name_part):
+                vm_error += vm_name_part + " "
 
     return vm_error
 
 
 def verify_exclude_vms_exist():
     vm_error = ""
-    for vm_parm in config["exclude"]:
+    for vm_parm in config.data("exclude"):
         # verify vm exists
         vm_name_part = get_vm_name(vm_parm)
         if not verify_vm_exist(vm_name_part):
@@ -1215,13 +992,13 @@ def get_all_vms():
 def show_vms_not_in_backup():
     # show all vm's not in backup scope
     all_vms = get_all_vms()
-    for vm_parm in config["vdi-export"]:
+    for vm_parm in config.data("vdi-export"):
         # remove from all_vms
         vm_name_part = get_vm_name(vm_parm)
         if vm_name_part in all_vms:
             all_vms.remove(vm_name_part)
 
-    for vm_parm in config["vm-export"]:
+    for vm_parm in config.data("vm-export"):
         # remove from all_vms
         vm_name_part = get_vm_name(vm_parm)
         if vm_name_part in all_vms:
@@ -1235,52 +1012,51 @@ def show_vms_not_in_backup():
 
 def cleanup_vmexport_vdiexport_dups():
     # if any vdi-export's exist in vm-export's then remove from vm-export
-    for vdi_parm in config["vdi-export"]:
+    for vdi_parm in config.data("vdi-export"):
         # vdi_parm has form PRD-name or PRD-name:5
         tmp_vdi_parm = get_vm_name(vdi_parm)
-        for vm_parm in config["vm-export"]:
+        for vm_parm in config.data("vm-export"):
             tmp_vm_parm = get_vm_name(vm_parm)
             if tmp_vm_parm == tmp_vdi_parm:
                 log(f"***WARNING vdi-export duplicate - removing vm-export={vm_parm}")
-                config["vm-export"].remove(vm_parm)
+                config.remove_data_list("vm-export", vm_parm)
     # remove duplicates
-    config["vdi-export"] = RemoveDup(config["vdi-export"])
-    config["vm-export"] = RemoveDup(config["vm-export"])
+    config.data("vdi-export", RemoveDup(config.data("vdi-export")))
+    config.data("vm-export", RemoveDup(config.data("vm-export")))
 
 
 def RemoveDup(duplicate):
-    # OK, this access to excludes works, good! Can use internally then.
-    # print(f'exclude list: {config["exclude"]} '  )
-    # print(f'exclude element 0: {config["exclude"][0]}'  )
-    # print(f'exclude element 1: {config["exclude"][1]}'  )
+    # OK, this access to exclude works, good! Can use internally then.
+
+    # This is for debugging and can remove / change the command in production
+    print(f'exclude list: {config.data("exclude")} ')
+
     final_list = []
     for val in duplicate:
         # print(f'===== val: {val}' % )
 
         # check if version exists and if so, take account of extra versions
-        # as well as if a numbered wildcarded version already exists!
+        # as well as if a numbered wildcard version already exists!
         versioned = 0
         accounted = 0
         # version flag here for debugging and tracking purposes, only
         if val.find(":") != -1:
             # found version in new VM entry and need to expand
             (valroot, numb) = val.split(":")
-            # print(f'found version to check: {val} {valroot}' )
+            print(f"found version to check: {val} {valroot}")
             versioned = 1
         else:
             versioned = 0
             # set root to be the same
             valroot = val
-            # print(f'valroot set to be val if simple name: {valroot}'  )
+            print(f"valroot set to be val if simple name: {valroot}")
 
-        # Need to replace old with new if found
-        # Redo list and replace with new value
+        # Need to replace old with new if found, Redo list and replace with new value
         # Loop on index, starting with 0 and if root is the same,
         # sub in new value; last index in array is len(array)-1 since len(array)
         # is the number of elements in an array.
         alen = len(final_list)
         i = 0
-        # # #
         while i < alen:
             if final_list[i].find(":") != -1:
                 (finroot, fnumb) = final_list[i].split(":")
@@ -1295,9 +1071,9 @@ def RemoveDup(duplicate):
                 # check again if excluded
                 # print('check again if excluded ........')
                 j = 0
-                elen = len(config["exclude"])
+                elen = len(config.data("exclude"))
                 while j < elen:
-                    eroot = config["exclude"][j]
+                    eroot = config.data("exclude")[j]
                     # printf('valroot:{valroot}'  )
                     # print(f'eroot:{eroot}'  )
                     # print(f'final_list[i]:{final_list[i]}'  )
@@ -1323,9 +1099,9 @@ def RemoveDup(duplicate):
         # However, check again if excluded and if so, do not add to list
         # print('check YET again if excluded !!!!!!!!')
         j = 0
-        elen = len(config["exclude"])
+        elen = len(config.data("exclude"))
         while j < elen:
-            eroot = config["exclude"][j]
+            eroot = config.data("exclude")[j]
             # print(f'valroot:{valroot}'  )
             # print(f'eroot:{eroot}'  )
             # print(f'final_list[i]:{final_list[i]}'  )
@@ -1350,58 +1126,10 @@ def RemoveDup(duplicate):
     return final_list
 
 
-def config_load_defaults():
-    # init config param not already loaded then load with default values
-    if not "pool_db_backup" in config.keys():
-        config["pool_db_backup"] = str(DEFAULT_POOL_DB_BACKUP)
-    if not "max_backups" in config.keys():
-        config["max_backups"] = str(DEFAULT_MAX_BACKUPS)
-    if not "vdi_export_format" in config.keys():
-        config["vdi_export_format"] = str(DEFAULT_VDI_EXPORT_FORMAT)
-    if not "backup_dir" in config.keys():
-        config["backup_dir"] = str(DEFAULT_BACKUP_DIR)
-    if not "status_log" in config.keys():
-        config["status_log"] = str(DEFAULT_STATUS_LOG)
-
-
-def config_print():
-    log("VmBackup.py running with these settings:")
-    log(f"  backup_dir        = {config['backup_dir']}")
-    log(f"  status_log        = {config['status_log']}")
-    log(f"  compress          = {arg.is_compress()}")
-    log(f"  max_backups       = {config['max_backups']}")
-    log(f"  vdi_export_format = {config['vdi_export_format']}")
-    log(f"  pool_db_backup    = {config['pool_db_backup']}")
-
-    log(f"  exclude (cnt)= {len(config['exclude'])}")
-    str = ""
-    for vm_parm in sorted(config["exclude"]):
-        str += f"{vm_parm}, "
-    if len(str) > 1:
-        str = str[:-2]
-    log(f"  exclude: {str}")
-
-    log(f"  vdi-export (cnt)= {len(config['vdi-export'])}")
-    str = ""
-    for vm_parm in sorted(config["vdi-export"]):
-        str += f"{vm_parm}, "
-    if len(str) > 1:
-        str = str[:-2]
-    log(f"  vdi-export: {str}")
-
-    log(f"  vm-export (cnt)= {len(config['vm-export'])}")
-    str = ""
-    for vm_parm in sorted(config["vm-export"]):
-        str += f"{vm_parm}, "
-    if len(str) > 1:
-        str = str[:-2]
-    log(f"  vm-export: {str}")
-
-
 def status_log(server, op="begin", kind="vmbackup.py", status=""):
     date = datetime.datetime.today().strftime("%y%m%d %H:%M:%S")
     message_line = f"{date},{kind},{server},{op},{status}\n"
-    open(config["status_log"], "a", 0).write(message_line)
+    open(config.data("status_log"), "a", 0).write(message_line)
 
 
 def status_log_begin(server):
@@ -1432,71 +1160,54 @@ if __name__ == "__main__":
     arg = argument.Arguments()
     arg.help_check()
     password = arg.get_password()
-    cfg_file = arg.args.config_file or ""
+    config.data("compress", arg.is_compress())
+    config.data("ignore_extra_keys", arg.is_ignore_extra_keys())
 
-    # init vm-export/vdi-export/exclude in config list
-    config["vm-export"] = []
-    config["vdi-export"] = []
-    config["exclude"] = []
+    cfg_file = arg.args.config_file or ""
+    if cfg_file != "":
+        config.filename(cfg_file)
+        if not config.load():
+            print(
+                "ERROR in reading the configuration file, consider ignore_extra_keys=true"
+            )
+            sys.exit(1)
+        else:
+            config_specified = 1
+            cleanup_vmexport_vdiexport_dups()
+
+    config.data("all_vms", get_all_vms())
+
+    log(f"VmBackup config loaded from: {cfg_file}")
+    config.print()  # show fully loaded config
+
     warning_match = False
     error_regex = False
-    all_vms = get_all_vms()
 
-    # process config file
-    if os.path.exists(cfg_file):
-        # config file exists
-        config_specified = 1
-        if config_load(cfg_file):
-            cleanup_vmexport_vdiexport_dups()
-        else:
-            print("ERROR in config_load, consider ignore_extra_keys=true")
-            sys.exit(1)
-    else:
-        # no config file exists - so cfg_file is actual vm_name/prefix
-        config_specified = 0
-        cmd_option = "vm-export"  # default
-        cmd_vm_name = cfg_file  # in this case a vm name pattern
-        if cmd_vm_name.count("=") == 1:
-            (cmd_option, cmd_vm_name) = cmd_vm_name.strip().split("=")
-        if cmd_option != "vm-export" and cmd_option != "vdi-export":
-            print(f"ERROR invalid config/vm_name: {cfg_file}")
-            arg.parser.print_help()
-            sys.exit(1)
-        save_to_config_export(cmd_option, cmd_vm_name)
-
-    config_load_defaults()  # set defaults that are not already loaded
-    log(f"VmBackup config loaded from: {cfg_file}")
-    config_print()  # show fully loaded config
-
-    if not is_config_valid():
+    if not config.is_valid():
         log("ERROR in configuration settings...")
-        sys.exit(1)
-    if len(config["vm-export"]) == 0 and len(config["vdi-export"]) == 0:
-        log("ERROR no VMs loaded")
         sys.exit(1)
 
     # acquire a xapi session by logging in
+    username = "root"
     try:
-        username = "root"
         session = XenAPI.Session("http://localhost/")
         # print (f"session is: {session} ")
-
         session.xenapi.login_with_password(username, password)
-        hosts = session.xenapi.host.get_all()
     except XenAPI.Failure as e:
         print(e)
         if e.details[0] == "HOST_IS_SLAVE":
             session = XenAPI.Session("http://" + e.details[1])
             session.xenapi.login_with_password(username, password)
-            hosts = session.xenapi.host.get_all()
         else:
             print("ERROR - XenAPI authentication error")
             sys.exit(1)
 
+    hosts = session.xenapi.host.get_all()
+
     if arg.is_preview():
         # check for duplicate names
         log("Checking all VMs for duplicate names ...")
-        for vm in all_vms:
+        for vm in config.data("all_vms"):
             vmref = [
                 x
                 for x in session.xenapi.VM.get_by_name_label(vm)
@@ -1508,34 +1219,23 @@ if __name__ == "__main__":
     if not verify_config_vms_exist():
         # error message(s) printed in verify_config_vms_exist
         sys.exit(1)
-    # OPTIONAL
-    # show_vms_not_in_backup()
-
-    # todo - these warning/errors are a little confusing, clean these up later
-    if arg.is_preview():
-        warning = ""
-        if warning_match:
-            warning = " - WARNINGS found (see above)"
-        if error_regex:
-            log(f"ERROR regex errors found (see above) {warning}")
-            sys.exit(1)
-        log(f"SUCCESS preview of parameters {warning}")
-        sys.exit(1)
 
     warning = ""
     if warning_match:
         warning = " - WARNINGS found (see above)"
-    log(f"SUCCESS check of parameters {warning}")
     if error_regex:
         log("ERROR regex errors found (see above)")
+        sys.exit(1)
+    log(f"SUCCESS preview / check of parameters {warning}")
+
+    if arg.is_preview():
         sys.exit(1)
 
     try:
         main(session)
-
+        session.logout
     except Exception as e:
         print(e)
         log(f"***ERROR EXCEPTION - {sys.exc_info()[0]}")
         log("***ERROR NOTE: see VmBackup output for details")
         raise
-    session.logout
